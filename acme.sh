@@ -170,8 +170,6 @@ acme_standalone(){
     check_acme_yes
     check_80
     get_public_ip
-    vps_info
-
     echo -e "${Tip} 在使用80端口申请模式时, 请先将您的域名解析至你的VPS的真实IP地址, 否则会导致证书申请失败"
     echo ""
     if [[ -n $ipv4 && -n $ipv6 ]]; then
