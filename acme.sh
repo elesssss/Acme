@@ -47,32 +47,91 @@ check_acme_no(){
     fi
 }
 
-install_base(){
-    echo -e "${Info} 开始安装依赖软件！"
-    OS=$(cat /etc/os-release | grep -o -E "Debian|Ubuntu|CentOS" | head -n 1)    
-    if [[ "$OS" == "Debian" || "$OS" == "Ubuntu" ]]; then
-        commands=("socat" "lsof" "cron" "ip")
-        apps=("socat" "lsof" "cron" "iproute2")
-        install=()
-        for i in ${!commands[@]}; do
-            [ ! $(command -v ${commands[i]}) ] && install+=(${apps[i]})
-        done
-        [ "${#install[@]}" -gt 0 ] && apt update -y && apt install -y ${install[@]}
-        systemctl enable --now cron >/dev/null 2>&1
-    elif [[ "$OS" == "CentOS" ]]; then
-        commands=("socat" "lsof" "crond" "ip")
-        apps=("socat" "lsof" "cronie" "iproute")
-        install=()
-        for i in ${!commands[@]}; do
-            [ ! $(command -v ${commands[i]}) ] && install+=(${apps[i]})
-        done
-        [ "${#install[@]}" -gt 0 ] && yum update -y && yum install -y ${install[@]}
-        systemctl enable --now crond >/dev/null 2>&1
+check_release(){
+    if [[ -e /etc/os-release ]]; then
+        . /etc/os-release
+        release=$ID
+    elif [[ -e /usr/lib/os-release ]]; then
+        . /usr/lib/os-release
+        release=$ID
+    fi
+    os_version=$(echo $VERSION_ID | cut -d. -f1,2)
+
+    if [[ "${release}" == "kali" ]]; then
+        echo
+    elif [[ "${release}" == "centos" ]]; then
+        if [[ ${os_version} -lt 8 ]]; then
+            echo -e " ${Error} 请使用 CentOS 8 或更高版本" && exit 1
+        fi
+    elif [[ "${release}" == "ubuntu" ]]; then
+        echo
+    elif [[ "${release}" == "fedora" ]]; then
+        echo
+    elif [[ "${release}" == "debian" ]]; then
+        echo
+    elif [[ "${release}" == "almalinux" ]]; then
+        echo
+    elif [[ "${release}" == "rocky" ]]; then
+        echo
+    elif [[ "${release}" == "oracle" ]]; then
+        echo
+    elif [[ "${release}" == "alpine" ]]; then
+        echo
     else
-        echo -e "${Error} 很抱歉，你的系统不受支持！"
+        echo -e "${Error} 抱歉，此脚本不支持您的操作系统。"
+        echo -e "${Info} 请确保您使用的是以下支持的操作系统之一："
+        echo -e "-${Red} Ubuntu${Nc} "
+        echo -e "-${Red} Debian ${Nc}"
+        echo -e "-${Red} CentOS ${Nc}"
+        echo -e "-${Red} Fedora ${Nc}"
+        echo -e "-${Red} Kali ${Nc}"
+        echo -e "-${Red} AlmaLinux ${Nc}"
+        echo -e "-${Red} Rocky Linux ${Nc}"
+        echo -e "-${Red} Oracle Linux ${Nc}"
+        echo -e "-${Red} Alpine Linux ${Nc}"
         exit 1
     fi
-    echo -e "${Info} 依赖安装完毕！"
+}
+
+check_pmc(){
+    check_release
+    if [[ "$release" == "debian" || "$release" == "ubuntu" || "$release" == "kali" ]]; then
+        updates="apt update -y"
+        installs="apt install -y"
+        apps=("socat" "lsof" "cron" "iproute2")
+    elif [[ "$release" == "almalinux" || "$release" == "fedora" || "$release" == "rocky" ]]; then
+        updates="dnf update -y"
+        installs="dnf install -y"
+        apps=("socat" "lsof" "cronie" "iproute")
+    elif [[ "$release" == "centos" || "$release" == "oracle" ]]; then
+        updates="yum update -y"
+        installs="yum install -y"
+        apps=("socat" "lsof" "cronie" "iproute")
+    elif [[ "$release" == "alpine" ]]; then
+        updates="apk update -f"
+        installs="apk add -f"
+        apps=("socat" "lsof" "dcron" "iproute2")
+    fi
+}
+
+install_base(){
+    check_pmc
+    cmds=("socat" "lsof" "crontab" "ip")
+    echo -e "${Info} 你的系统是${Red} $release $os_version ${Nc}"
+    for g in "${!cmds[@]}"; do
+        if [ ! $(type -p ${cmds[g]}) ]; then
+            CMDS+=(${cmds[g]})
+            DEPS+=(${apps[g]})
+        fi
+    done
+
+    if [ "${#DEPS[@]}" -ge 1 ]; then
+        echo -e "${Info} 安装依赖列表：${Green}${CMDS[@]}${Nc}"
+        $updates >/dev/null 2>&1
+        $installs ${DEPS[@]} >/dev/null 2>&1
+    else
+        echo -e "${Info} 所有依赖已存在，不需要额外安装。"
+    fi
 }
 
 install_acme(){
