@@ -141,6 +141,12 @@ install_base(){
     else
         echo -e "${Info} 所有依赖已存在，不需要额外安装。"
     fi
+    
+    if [[ "$release" == "alpine" ]]; then
+        rc-service dcron restart >/dev/null 2>&1
+    else
+        systemctl restart cron* >/dev/null 2>&1
+    fi
 }
 
 install_acme(){
