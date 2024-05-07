@@ -60,9 +60,7 @@ check_release(){
     if [[ "${release}" == "kali" ]]; then
         echo
     elif [[ "${release}" == "centos" ]]; then
-        if [[ ${os_version} -lt 8 ]]; then
-            echo -e " ${Error} 请使用 CentOS 8 或更高版本" && exit 1
-        fi
+        echo
     elif [[ "${release}" == "ubuntu" ]]; then
         echo
     elif [[ "${release}" == "fedora" ]]; then
@@ -73,14 +71,14 @@ check_release(){
         echo
     elif [[ "${release}" == "rocky" ]]; then
         echo
-    elif [[ "${release}" == "oracle" ]]; then
-        echo
+    elif [[ "${release}" == "ol" ]]; then
+        release=oracle
     elif [[ "${release}" == "alpine" ]]; then
         echo
     else
         echo -e "${Error} 抱歉，此脚本不支持您的操作系统。"
         echo -e "${Info} 请确保您使用的是以下支持的操作系统之一："
-        echo -e "-${Red} Ubuntu${Nc} "
+        echo -e "-${Red} Ubuntu ${Nc} "
         echo -e "-${Red} Debian ${Nc}"
         echo -e "-${Red} CentOS ${Nc}"
         echo -e "-${Red} Fedora ${Nc}"
@@ -98,19 +96,28 @@ check_pmc(){
     if [[ "$release" == "debian" || "$release" == "ubuntu" || "$release" == "kali" ]]; then
         updates="apt update -y"
         installs="apt install -y"
+        check_install="dpkg -s"
         apps=("socat" "lsof" "cron" "iproute2")
-    elif [[ "$release" == "almalinux" || "$release" == "fedora" || "$release" == "rocky" ]]; then
-        updates="dnf update -y"
-        installs="dnf install -y"
-        apps=("socat" "lsof" "cronie" "iproute")
-    elif [[ "$release" == "centos" || "$release" == "oracle" ]]; then
-        updates="yum update -y"
-        installs="yum install -y"
-        apps=("socat" "lsof" "cronie" "iproute")
     elif [[ "$release" == "alpine" ]]; then
         updates="apk update -f"
         installs="apk add -f"
+        check_install="apk info -e"
         apps=("socat" "lsof" "dcron" "iproute2")
+    elif [[ "$release" == "almalinux" || "$release" == "rocky" || "$release" == "oracle" ]]; then
+        updates="dnf update -y"
+        installs="dnf install -y"
+        check_install="dnf list installed"
+        apps=("socat" "lsof" "cronie" "iproute")
+    elif [[ "$release" == "centos" ]]; then
+        updates="yum update -y"
+        installs="yum install -y"
+        check_install="yum list installed"
+        apps=("socat" "lsof" "cronie" "iproute")
+    elif [[ "$release" == "fedora" ]]; then
+        updates="dnf update -y"
+        installs="dnf install -y"
+        check_install="dnf list installed"
+        apps=("socat" "lsof" "cronie" "iproute")
     fi
 }
 
@@ -118,17 +125,19 @@ install_base(){
     check_pmc
     cmds=("socat" "lsof" "crontab" "ip")
     echo -e "${Info} 你的系统是${Red} $release $os_version ${Nc}"
-    for g in "${!cmds[@]}"; do
-        if [ ! $(type -p ${cmds[g]}) ]; then
+    echo
+
+    for g in "${!apps[@]}"; do
+        if ! $check_install "${apps[$g]}" &> /dev/null; then
             CMDS+=(${cmds[g]})
-            DEPS+=(${apps[g]})
+            DEPS+=("${apps[$g]}")
         fi
     done
-
-    if [ "${#DEPS[@]}" -ge 1 ]; then
-        echo -e "${Info} 安装依赖列表：${Green}${CMDS[@]}${Nc}"
-        $updates >/dev/null 2>&1
-        $installs ${DEPS[@]} >/dev/null 2>&1
+    
+    if [ ${#DEPS[@]} -gt 0 ]; then
+        echo -e "${Tip} 安装依赖列表：${Green}${CMDS[@]}${Nc} 请稍后..."
+        $updates &> /dev/null
+        $installs "${DEPS[@]}" &> /dev/null
     else
         echo -e "${Info} 所有依赖已存在，不需要额外安装。"
     fi
