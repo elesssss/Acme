@@ -220,22 +220,17 @@ IPv6：${IPv6}
 }
 
 get_public_ip(){
-    regex_pattern='^(eth|ens|eno|esp|enp|venet|vif)[0-9]+'
-    InterFace=($(ip link show | awk -F': ' '{print $2}' | grep -E "$regex_pattern" | sed "s/@.*//g"))
-    ipv4=""
-    ipv6=""
+    InFaces=($(netstat -i | awk '{print $1}' | grep -E '^(eth|ens|eno|esp|enp|venet|vif)[0-9]+'))
 
-    for i in "${InterFace[@]}"; do
-        Public_IPv4=$(curl -s4m8 --interface "$i" api64.ipify.org -k | sed '/^\(2a09\|104\.28\)/d')
-        Public_IPv6=$(curl -s6m8 --interface "$i" api64.ipify.org -k | sed '/^\(2a09\|104\.28\)/d')
+    for i in "${InFaces[@]}"; do
+        Public_IPv4=$(curl -s4 --interface "$i" ip.sb)
+        Public_IPv6=$(curl -s6 --interface "$i" ip.sb)
 
         # 检查是否获取到IP地址
-        if [[ -n "$Public_IPv4" ]]; then
+        if [[ -n "$Public_IPv4" || -n "$Public_IPv6" ]]; then
             ipv4="$Public_IPv4"
-        fi
-
-        if [[ -n "$Public_IPv6" ]]; then
             ipv6="$Public_IPv6"
+            break
         fi
     done
 }
