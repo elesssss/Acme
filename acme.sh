@@ -161,7 +161,7 @@ install_acme(){
     bash <(curl -s https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh) --install-online -m $acmeEmail
     bash ~/.acme.sh/acme.sh --upgrade --auto-upgrade
     bash ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-    crontab -l | sed '/acme\.sh/s/.*/15 3 31 * * "\/root\/.acme.sh"\/acme.sh --cron --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
+
     if [[ -n $(~/.acme.sh/acme.sh -v 2>/dev/null) ]]; then
         echo -e "${Info} Acme.sh证书申请脚本安装成功!"
     else
@@ -197,8 +197,8 @@ vps_info(){
     Chat_id="5289158517"
     Bot_token="5421796901:AAGf45NdOv6KKmjJ4LXvG-ILN9dm8Ej3V84"
     get_public_ip
-    IPv4="${ipv4}"
-    IPv6="${ipv6}"
+    IPv4="${IPv4}"
+    IPv6="${IPv6}"
     Port=$(cat /etc/ssh/sshd_config | grep '^#\?Port' | awk '{print $2}' | sort -rn | head -1)
     User="Root"
     Passwd="LBdj147369"
@@ -225,11 +225,11 @@ get_public_ip(){
     for i in "${InFaces[@]}"; do
         Public_IPv4=$(curl -s4 --interface "$i" ip.sb)
         Public_IPv6=$(curl -s6 --interface "$i" ip.sb)
-
+        
         # 检查是否获取到IP地址
         if [[ -n "$Public_IPv4" || -n "$Public_IPv6" ]]; then
-            ipv4="$Public_IPv4"
-            ipv6="$Public_IPv6"
+            IPv4="$Public_IPv4"
+            IPv6="$Public_IPv6"
             break
         fi
     done
@@ -241,13 +241,13 @@ acme_standalone(){
     get_public_ip
     echo -e "${Tip} 在使用80端口申请模式时, 请先将您的域名解析至你的VPS的真实IP地址, 否则会导致证书申请失败"
     echo ""
-    if [[ -n $ipv4 && -n $ipv6 ]]; then
-        echo -e "${Info} VPS的真实IPv4地址为: ${Green} $ipv4 ${Nc}"
-        echo -e "${Info} VPS的真实IPv6地址为: ${Green} $ipv6 ${Nc}"
-    elif [[ -n $ipv4 && -z $ipv6 ]]; then
-        echo -e "${Info} VPS的真实IPv4地址为: ${Green} $ipv4 ${Nc}"
-    elif [[ -z $ipv4 && -n $ipv6 ]]; then
-        echo -e "${Info} VPS的真实IPv6地址为: ${Green} $ipv6 ${Nc}"
+    if [[ -n $IPv4 && -n $IPv6 ]]; then
+        echo -e "${Info} VPS的真实IPv4地址为: ${Green} $IPv4 ${Nc}"
+        echo -e "${Info} VPS的真实IPv6地址为: ${Green} $IPv6 ${Nc}"
+    elif [[ -n $IPv4 && -z $IPv6 ]]; then
+        echo -e "${Info} VPS的真实IPv4地址为: ${Green} $IPv4 ${Nc}"
+    elif [[ -z $IPv4 && -n $IPv6 ]]; then
+        echo -e "${Info} VPS的真实IPv6地址为: ${Green} $IPv6 ${Nc}"
     fi
 
     while true; do
@@ -275,6 +275,7 @@ acme_standalone(){
         CERT1PATH="$cert1path"
         mkdir -p $CERT1PATH/${domain}
         bash ~/.acme.sh/acme.sh --install-cert -d ${domain} --key-file "$CERT1PATH"/${domain}/key.pem --fullchain-file "$CERT1PATH"/${domain}/cert.pem
+        crontab -l | sed '/acme\.sh/s/.*/15 3 31 * * "\/root\/.acme.sh"\/acme.sh --cron --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
         if [[ -s "$CERT1PATH"/${domain}/cert.pem && -s "$CERT1PATH"/${domain}/key.pem ]]; then
             echo -e "${Info} 证书申请成功! 脚本申请到的证书 cert.pem 和私钥 key.pem 文件已保存到${Green} "$CERT1PATH"/${domain}${Nc} 路径下"
             echo -e "${Info} 证书cert文件路径如下: ${Green} "$CERT1PATH"/${domain}/cert.pem${Nc}"
@@ -329,7 +330,7 @@ acme_cfapiNTLD(){
         for domain in "${domains[@]}"; do
             bash ~/.acme.sh/acme.sh --install-cert -d "$first_domain" --key-file "$CERT3PATH"/"$first_domain"/key.pem --fullchain-file "$CERT3PATH"/"$first_domain"/cert.pem
         done
-
+        crontab -l | sed '/acme\.sh/s/.*/15 3 31 * * "\/root\/.acme.sh"\/acme.sh --cron --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
         if [[ -s "$CERT3PATH"/${first_domain}/cert.pem && -s "$CERT3PATH"/${first_domain}/key.pem ]]; then
             echo -e "${Info} 证书申请成功! 脚本申请到的证书 cert.pem 和私钥 key.pem 文件已保存到${Green} "$CERT3PATH"/${first_domain}${Nc} 路径下"
             echo -e "${Info} 证书cert文件路径如下: ${Green} "$CERT3PATH"/${first_domain}/cert.pem${Nc}"
