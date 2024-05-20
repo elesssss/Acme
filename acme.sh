@@ -181,7 +181,7 @@ check_80_status(){
         echo
         echo -e "${Red} ${http}${Nc}"
         echo
-        read -rp "如需结束占用进程请按Y，按其他键则退出 [Y/N]: " yn
+        read -rp "如需结束占用进程请按Y，按其他键则退出: " yn
         if [[ $yn == [yY] ]]; then
             kill -9 ${httppid}
         else
@@ -415,6 +415,7 @@ ${Green} 0.${Nc} 退出脚本"
     echo
     read -rp "请输入选项 [0-7]: " number
     case "$number" in
+        0) exit 1 ;;
         1) install_acme ;;
         2) uninstall ;;
         3) acme_standalone ;;
@@ -422,7 +423,7 @@ ${Green} 0.${Nc} 退出脚本"
         5) view_cert ;;
         6) renew_cert ;;
         7) switch_provider ;;
-        *) exit 1 ;;
+        *) echo -e "${Error} 请输入数字0-8！" ;;
     esac
 }
 menu
