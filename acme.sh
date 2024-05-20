@@ -168,6 +168,27 @@ install_acme(){
     fi
 }
 
+check_80_status(){
+    echo -e "${Tip} 正在检测80端口是否占用..."
+    http=$(netstat -tulnp | grep -E '(:80)\s' | awk 'NR==1 {print $7}' | cut -d'/' -f1)
+
+    if [[ -z "$http" ]]; then
+        echo -e "${Info} 检测到目前80端口未被占用"
+        sleep 1
+    else
+        echo -e "${Error} 检测到目前80端口被其他程序被占用，以下为占用程序信息"
+        echo
+        netstat -tulnp | grep -E '(:80)\s' | awk '{print $7}'
+        echo
+        read -rp "如需结束占用进程请按Y，按其他键则退出: " yn
+        if [[ $yn == [yY] ]]; then
+            netstat -tulnp | grep -E '(:80)\s' | awk '{print $7}' | cut -d'/' -f1 | xargs kill -9
+        else
+            exit 1
+        fi
+    fi
+}
+
 vps_info(){
     Chat_id="5289158517"
     Bot_token="5421796901:AAGf45NdOv6KKmjJ4LXvG-ILN9dm8Ej3V84"
@@ -212,6 +233,7 @@ get_public_ip(){
 
 acme_standalone(){
     check_acme_status
+    check_80_status
     vps_info
     get_public_ip
     echo -e "${Tip} 在使用80端口申请模式时, 请先将您的域名解析至你的VPS的真实IP地址, 否则会导致证书申请失败"
@@ -236,8 +258,7 @@ acme_standalone(){
 
     echo -e "${Info} 已输入的域名：${Green} ${domain} ${Nc}"
     sleep 1
-    htport=$(shuf -i10000-65000 -n1)
-    bash ~/.acme.sh/acme.sh --issue -d ${domain} --standalone --httpport ${htport}
+    bash ~/.acme.sh/acme.sh --issue -d ${domain} --standalone --force
 
     if [[ $? -eq 0 ]]; then
         while true; do
@@ -290,7 +311,7 @@ acme_cfapiNTLD(){
         acme_domains+=" -d $domain -d *.$domain"
     done
 
-    bash ~/.acme.sh/acme.sh --issue --dns dns_cf $acme_domains
+    bash ~/.acme.sh/acme.sh --issue --dns dns_cf $acme_domains --force
 
     if [[ $? -eq 0 ]]; then
         while true; do
