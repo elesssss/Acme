@@ -290,7 +290,7 @@ acme_cfapiNTLD(){
         acme_domains+=" -d $domain -d *.$domain"
     done
 
-    bash ~/.acme.sh/acme.sh --issue --dns dns_cf $acme_domains --force
+    bash ~/.acme.sh/acme.sh --issue --dns dns_cf $acme_domains
 
     if [[ $? -eq 0 ]]; then
         while true; do
