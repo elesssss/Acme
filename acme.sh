@@ -20,33 +20,6 @@ check_root(){
     fi
 }
 
-backmenu(){
-    echo -e "${Info} 所选命令操作执行完成"
-    read -rp "请输入“y”退出, 或按任意键回到主菜单：" backmenuInput
-    case "$backmenuInput" in
-        y) exit 1 ;;
-        *) menu ;;
-    esac
-}
-
-check_acme_yes(){
-    if [[ -n $(~/.acme.sh/acme.sh -v 2>/dev/null) ]]; then
-        echo -e "${Tip} acme.sh已安装！"
-    else
-        echo -e "${Error} 未安装acme.sh，请先安装！"
-        backmenu
-    fi
-}
-
-check_acme_no(){
-    if [[ -z $(~/.acme.sh/acme.sh -v 2>/dev/null) ]]; then
-        echo -e "${Tip} 未安装acme.sh，请先安装！"
-    else
-        echo -e "${Info} acme.sh已安装！"
-        backmenu
-    fi
-}
-
 check_release(){
     if [[ -e /etc/os-release ]]; then
         . /etc/os-release
@@ -97,33 +70,33 @@ check_pmc(){
         updates="apt update -y"
         installs="apt install -y"
         check_install="dpkg -s"
-        apps=("socat" "lsof" "cron" "iproute2")
+        apps=("socat" "net-tools" "cron")
     elif [[ "$release" == "alpine" ]]; then
         updates="apk update -f"
         installs="apk add -f"
         check_install="apk info -e"
-        apps=("socat" "lsof" "dcron" "iproute2")
+        apps=("socat" "net-tools" "dcron")
     elif [[ "$release" == "almalinux" || "$release" == "rocky" || "$release" == "oracle" ]]; then
         updates="dnf update -y"
         installs="dnf install -y"
         check_install="dnf list installed"
-        apps=("socat" "lsof" "cronie" "iproute")
+        apps=("socat" "net-tools" "cronie")
     elif [[ "$release" == "centos" ]]; then
         updates="yum update -y"
         installs="yum install -y"
         check_install="yum list installed"
-        apps=("socat" "lsof" "cronie" "iproute")
+        apps=("socat" "net-tools" "cronie")
     elif [[ "$release" == "fedora" ]]; then
         updates="dnf update -y"
         installs="dnf install -y"
         check_install="dnf list installed"
-        apps=("socat" "lsof" "cronie" "iproute")
+        apps=("socat" "net-tools" "cronie")
     fi
 }
 
 install_base(){
     check_pmc
-    cmds=("socat" "lsof" "crontab" "ip")
+    cmds=("socat" "netstat" "crontab" "ip")
     echo -e "${Info} 你的系统是${Red} $release $os_version ${Nc}"
     echo
 
@@ -133,7 +106,7 @@ install_base(){
             DEPS+=("${apps[$g]}")
         fi
     done
-    
+
     if [ ${#DEPS[@]} -gt 0 ]; then
         echo -e "${Tip} 安装依赖列表：${Green}${CMDS[@]}${Nc} 请稍后..."
         $updates &> /dev/null
@@ -141,7 +114,7 @@ install_base(){
     else
         echo -e "${Info} 所有依赖已存在，不需要额外安装。"
     fi
-    
+
     if [[ "$release" == "alpine" ]]; then
         rc-service dcron restart >/dev/null 2>&1
     else
@@ -149,44 +122,68 @@ install_base(){
     fi
 }
 
-install_acme(){
-    check_acme_no
-    install_base
-    read -rp "请输入注册邮箱 (例: admin@gmail.com, 或留空自动生成一个gmail邮箱): " acmeEmail
-    if [[ -z $acmeEmail ]]; then
-        autoEmail=$(date +%s%N | md5sum | cut -c 1-16)
-        acmeEmail=$autoEmail@gmail.com
-        echo -e "${Tip} 已取消设置邮箱, 使用自动生成的gmail邮箱: $acmeEmail"
-    fi
-    bash <(curl -s https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh) --install-online -m $acmeEmail
-    bash ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-    bash ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-
-    if [[ -n $(~/.acme.sh/acme.sh -v 2>/dev/null) ]]; then
-        echo -e "${Info} Acme.sh证书申请脚本安装成功!"
+return_menu(){
+    echo
+    echo -e "${Info} 所选命令操作执行完成"
+    read -rp "请输入“y”退出, 或按任意键回到主菜单：" yn
+    if [[ $yn == [yY] ]]; then
+        exit 1
     else
-        echo -e "${Error} 抱歉, Acme.sh证书申请脚本安装失败"
-        echo -e "${Tip} 建议如下："
-        echo -e "${Tip} 1. 检查VPS的网络环境"
-        echo -e "${Tip} 2. 脚本可能跟不上时代, 请更换其他脚本"
+        menu
     fi
-    backmenu
 }
 
-check_80(){
-    echo -e "${Tip} 正在检测80端口是否占用..."
-    sleep 1
+check_acme_status(){
+    if [ ! -e ~/.acme.sh ]; then
+        echo -e "${Error} acme.sh 未安装，请先安装！"
+        exit 1
+    fi
+}
 
-    if [[ $(lsof -i:"80" | grep -i -c "listen") -eq 0 ]]; then
+install_acme(){
+    if [ ! -e ~/.acme.sh ]; then
+        install_base
+        read -rp "请输入注册邮箱 (例: admin@gmail.com, 或留空自动生成一个gmail邮箱): " acmeEmail
+        if [[ -z $acmeEmail ]]; then
+            autoEmail=$(date +%s%N | md5sum | cut -c 1-16)
+            acmeEmail=$autoEmail@gmail.com
+            echo -e "${Tip} 已取消设置邮箱, 使用自动生成的gmail邮箱: $acmeEmail"
+        fi
+        bash <(curl -s https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh) --install-online -m $acmeEmail
+        bash ~/.acme.sh/acme.sh --upgrade --auto-upgrade
+        bash ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+
+        if [ -e ~/.acme.sh ]; then
+            echo -e "${Info} Acme.sh证书申请脚本安装成功!"
+            return_menu
+        else
+            echo -e "${Error} 抱歉, Acme.sh证书申请脚本安装失败"
+            echo -e "${Tip} 建议如下："
+            echo -e "${Tip} 1. 检查VPS的网络环境"
+            echo -e "${Tip} 2. 脚本可能跟不上时代, 请更换其他脚本"
+            exit 1
+        fi
+    else
+        echo -e "${Error} acme.sh 已安装！"
+    fi
+}
+
+check_80_status(){
+    echo -e "${Tip} 正在检测80端口是否占用..."
+    http=$(netstat -tulnp | grep ':80' | awk 'NR==1 {print $7}')
+    httppid=$(netstat -tulnp | grep ':80' | awk 'NR==1 {print $7}' | cut -d'/' -f1)
+
+    if [[ -z "$httppid" ]]; then
         echo -e "${Info} 检测到目前80端口未被占用"
         sleep 1
     else
         echo -e "${Error} 检测到目前80端口被其他程序被占用，以下为占用程序信息"
-        lsof -i:"80"
+        echo
+        echo -e "${Red} ${http}${Nc}"
+        echo
         read -rp "如需结束占用进程请按Y，按其他键则退出 [Y/N]: " yn
-        if [[ $yn =~ "Y"|"y" ]]; then
-            lsof -i:"80" | awk '{print $2}' | grep -v "PID" | xargs kill -9
-            sleep 1
+        if [[ $yn == [yY] ]]; then
+            kill -9 ${httppid}
         else
             exit 1
         fi
@@ -225,7 +222,7 @@ get_public_ip(){
     for i in "${InFaces[@]}"; do
         Public_IPv4=$(curl -s4 --max-time 2 --interface "$i" ip.gs)
         Public_IPv6=$(curl -s6 --max-time 2 --interface "$i" ip.gs)
-        
+
         # 检查是否获取到IP地址
         if [[ -n "$Public_IPv4" || -n "$Public_IPv6" ]]; then
             IPv4="$Public_IPv4"
@@ -236,11 +233,12 @@ get_public_ip(){
 }
 
 acme_standalone(){
-    check_acme_yes
-    check_80
+    check_acme_status
+    check_80_status
+    vps_info
     get_public_ip
     echo -e "${Tip} 在使用80端口申请模式时, 请先将您的域名解析至你的VPS的真实IP地址, 否则会导致证书申请失败"
-    echo ""
+    echo
     if [[ -n $IPv4 && -n $IPv6 ]]; then
         echo -e "${Info} VPS的真实IPv4地址为: ${Green} $IPv4 ${Nc}"
         echo -e "${Info} VPS的真实IPv6地址为: ${Green} $IPv6 ${Nc}"
@@ -277,7 +275,7 @@ acme_standalone(){
         bash ~/.acme.sh/acme.sh --install-cert -d ${domain} --key-file "$CERT1PATH"/${domain}/key.pem --fullchain-file "$CERT1PATH"/${domain}/cert.pem
         crontab -l | sed '/acme\.sh/s/.*/15 3 31 * * "\/root\/.acme.sh"\/acme.sh --cron --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
         if [[ -s "$CERT1PATH"/${domain}/cert.pem && -s "$CERT1PATH"/${domain}/key.pem ]]; then
-            echo -e "${Info} 证书申请成功! 脚本申请到的证书 cert.pem 和私钥 key.pem 文件已保存到${Green} "$CERT1PATH"/${domain}${Nc} 路径下"
+            echo -e "${Info} 证书申请成功! 脚本申请到的证书 ${Green}cert.pem${Nc} 和私钥 ${Green}key.pem${Nc} 文件已保存到${Green} "$CERT1PATH"/${domain}${Nc} 路径下"
             echo -e "${Info} 证书cert文件路径如下: ${Green} "$CERT1PATH"/${domain}/cert.pem${Nc}"
             echo -e "${Info} 私钥key文件路径如下: ${Green} "$CERT1PATH"/${domain}/key.pem${Nc}"
         fi
@@ -287,11 +285,12 @@ acme_standalone(){
         echo -e "${Tip} 2. 请检查DNS解析设置的IP是否为VPS的真实IP"
         echo -e "${Tip} 3. 脚本可能跟不上时代, 请更换其他的脚本"
     fi
+    exit 1
 }
 
 acme_cfapiNTLD(){
-    check_acme_yes
-
+    check_acme_status
+    vps_info
     domains=()
     read -rp "请输入需要申请的域名数量: " domains_count
     [[ ! $domains_count =~ ^[1-99][0-99]*$ ]] && echo -e "${Error} 请输入有效的域名数量！" && exit 1
@@ -332,7 +331,7 @@ acme_cfapiNTLD(){
         done
         crontab -l | sed '/acme\.sh/s/.*/15 3 31 * * "\/root\/.acme.sh"\/acme.sh --cron --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
         if [[ -s "$CERT3PATH"/${first_domain}/cert.pem && -s "$CERT3PATH"/${first_domain}/key.pem ]]; then
-            echo -e "${Info} 证书申请成功! 脚本申请到的证书 cert.pem 和私钥 key.pem 文件已保存到${Green} "$CERT3PATH"/${first_domain}${Nc} 路径下"
+            echo -e "${Info} 证书申请成功! 脚本申请到的证书 ${Green}cert.pem${Nc} 和私钥 ${Green}key.pem${Nc} 文件已保存到${Green} "$CERT3PATH"/${first_domain}${Nc} 路径下"
             echo -e "${Info} 证书cert文件路径如下: ${Green} "$CERT3PATH"/${first_domain}/cert.pem${Nc}"
             echo -e "${Info} 私钥key文件路径如下: ${Green} "$CERT3PATH"/${first_domain}/key.pem${Nc}"
         fi
@@ -341,29 +340,31 @@ acme_cfapiNTLD(){
         echo -e "${Tip} 1. 自行检查dns_api信息是否正确"
         echo -e "${Tip} 2. 脚本可能跟不上时代, 请更换其他的脚本"
     fi
+    exit 1
 }
 
 view_cert(){
-    check_acme_yes
+    check_acme_status
     bash ~/.acme.sh/acme.sh --list
-    backmenu
+    sleep 3s
+    return_menu
 }
 
 renew_cert(){
-    check_acme_yes
+    check_acme_status
     bash ~/.acme.sh/acme.sh --list
-    read -rp "请输入要续期的域名证书 (复制Main_Domain下显示的域名): " domain
-    [[ -z $domain ]] && echo -e "${Erro} 未输入域名, 无法执行操作！" && exit 1
+    read -rp "请输入要续期的域名证书 (复制 Main_Domain 下显示的域名): " domain
+    [[ -z $domain ]] && echo -e "${Error} 未输入域名, 无法执行操作！" && exit 1
     if [[ -n $(bash ~/.acme.sh/acme.sh --list | grep $domain) ]]; then
         bash ~/.acme.sh/acme.sh --renew -d ${domain} --force
     else
-        echo -e "${Erro} 未找到 ${Red}${domain}${Nc} 的域名证书，请再次检查域名输入正确"
+        echo -e "${Error} 未找到 ${Red}${domain}${Nc} 的域名证书，请再次检查域名输入正确"
     fi
-    backmenu
+    return_menu
 }
 
 switch_provider(){
-    check_acme_yes
+    check_acme_status
     echo -e "${Tip} 请选择证书提供商, 默认通过 Letsencrypt.org 来申请证书"
     echo -e "${Tip} 如果证书申请失败, 例如一天内通过 Letsencrypt.org 申请次数过多, 可选 ${Red}BuyPass.com${Nc} 或 ${Red}ZeroSSL.com${Nc} 来申请"
     echo -e " ${Green}1.${Nc} Letsencrypt.org"
@@ -375,11 +376,12 @@ switch_provider(){
         3) bash ~/.acme.sh/acme.sh --set-default-ca --server zerossl && echo -e "${Info} 切换证书提供商为 ${Green}ZeroSSL.com${Nc} 成功！" ;;
         *) bash ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt && echo -e "${Info} 切换证书提供商为 ${Green}Letsencrypt.org${Nc} 成功！" ;;
     esac
-    backmenu
+    sleep 3s
+    return_menu
 }
 
 uninstall(){
-    check_acme_yes
+    check_acme_status
     ~/.acme.sh/acme.sh --uninstall
     crontab -l | sed '/acme\.sh/s/.*/  /' | crontab -
     rm -rf ~/.acme.sh
@@ -399,20 +401,20 @@ cop_info(){
 menu(){
     cop_info
     check_root
-    echo -e " ${Green}1.${Nc} 安装 Acme.sh 域名证书申请脚本
- ${Green}2.${Nc} ${Red}卸载 Acme.sh 域名证书申请脚本${Nc}
+    echo -e "${Green} 1.${Nc} 安装 Acme.sh 域名证书申请脚本
+${Green} 2.${Nc} ${Red}卸载 Acme.sh 域名证书申请脚本${Nc}
 -------------
- ${Green}3.${Nc} 申请单域名证书 ${Yellow}(80端口申请)${Nc}
- ${Green}4.${Nc} 申请泛域名证书 ${Yellow}(CF API申请)${Nc} ${Green}(无需解析)${Nc} ${Red}(不支持freenom域名)${Nc}
+${Green} 3.${Nc} 申请单域名证书 ${Yellow}(80端口申请)${Nc}
+${Green} 4.${Nc} 申请泛域名证书 ${Yellow}(CF API申请)${Nc} ${Green}(无需解析)${Nc} ${Red}(不支持freenom域名)${Nc}
 -------------
- ${Green}5.${Nc} 查看已申请的证书
- ${Green}6.${Nc} 手动续期已申请的证书
- ${Green}7.${Nc} 切换证书颁发机构
+${Green} 5.${Nc} 查看已申请的证书
+${Green} 6.${Nc} 手动续期已申请的证书
+${Green} 7.${Nc} 切换证书颁发机构
 -------------
- ${Green}0.${Nc} 退出脚本"
-    echo ""
-    read -rp "请输入选项 [0-7]: " NumberInput
-    case "$NumberInput" in
+${Green} 0.${Nc} 退出脚本"
+    echo
+    read -rp "请输入选项 [0-7]: " number
+    case "$number" in
         1) install_acme ;;
         2) uninstall ;;
         3) acme_standalone ;;
