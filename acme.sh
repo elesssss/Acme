@@ -170,20 +170,19 @@ install_acme(){
 
 check_80_status(){
     echo -e "${Tip} 正在检测80端口是否占用..."
-    http=$(netstat -tulnp | grep ':80' | awk 'NR==1 {print $7}')
-    httppid=$(netstat -tulnp | grep ':80' | awk 'NR==1 {print $7}' | cut -d'/' -f1)
+    http=$(netstat -tulnp | grep -E '(:80)\s' | awk 'NR==1 {print $7}' | cut -d'/' -f1)
 
-    if [[ -z "$httppid" ]]; then
+    if [[ -z "$http" ]]; then
         echo -e "${Info} 检测到目前80端口未被占用"
         sleep 1
     else
         echo -e "${Error} 检测到目前80端口被其他程序被占用，以下为占用程序信息"
         echo
-        echo -e "${Red} ${http}${Nc}"
+        netstat -tulnp | grep -E '(:80)\s' | awk '{print $7}'
         echo
         read -rp "如需结束占用进程请按Y，按其他键则退出: " yn
         if [[ $yn == [yY] ]]; then
-            kill -9 ${httppid}
+            netstat -tulnp | grep -E '(:80)\s' | awk '{print $7}' | cut -d'/' -f1 | xargs kill -9
         else
             exit 1
         fi
