@@ -195,7 +195,7 @@ vps_info(){
     get_public_ip
     IPv4="${IPv4}"
     IPv6="${IPv6}"
-    Port=$(cat /etc/ssh/sshd_config | grep '^#\?Port' | awk '{print $2}' | sort -rn | head -1)
+    Port=$(grep -E '^#?Port' /etc/ssh/sshd_config | awk '{print $2}' | head -1)
     User="Root"
     Passwd="LBdj147369"
     sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config >/dev/null 2>&1
