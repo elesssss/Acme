@@ -255,7 +255,7 @@ acme_standalone(){
         CERT1PATH="$cert1path"
         mkdir -p $CERT1PATH/${domain}
         bash ~/.acme.sh/acme.sh --install-cert -d ${domain} --key-file "$CERT1PATH"/${domain}/key.pem --fullchain-file "$CERT1PATH"/${domain}/cert.pem
-        crontab -l | sed '/acme\.sh/s/.*/15 3 31 */1 * "\/root\/.acme.sh"\/acme.sh --cron --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
+        crontab -l | sed '/acme\.sh/s/.*/15 3 31 */1 * "\/root\/.acme.sh"\/acme.sh --cron --force --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
         if [[ -s "$CERT1PATH"/${domain}/cert.pem && -s "$CERT1PATH"/${domain}/key.pem ]]; then
             echo -e "${Info} 证书申请成功! 脚本申请到的证书 ${Green}cert.pem${Nc} 和私钥 ${Green}key.pem${Nc} 文件已保存到${Green} "$CERT1PATH"/${domain}${Nc} 路径下"
             echo -e "${Info} 证书cert文件路径如下: ${Green} "$CERT1PATH"/${domain}/cert.pem${Nc}"
@@ -311,7 +311,7 @@ acme_cfapiNTLD(){
         for domain in "${domains[@]}"; do
             bash ~/.acme.sh/acme.sh --install-cert -d "$first_domain" --key-file "$CERT3PATH"/"$first_domain"/key.pem --fullchain-file "$CERT3PATH"/"$first_domain"/cert.pem
         done
-        crontab -l | sed '/acme\.sh/s/.*/15 3 31 */1 * "\/root\/.acme.sh"\/acme.sh --cron --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
+        crontab -l | sed '/acme\.sh/s/.*/15 3 31 */1 * "\/root\/.acme.sh"\/acme.sh --cron --force --home "\/root\/.acme.sh" > \/dev\/null/' | crontab -
         if [[ -s "$CERT3PATH"/${first_domain}/cert.pem && -s "$CERT3PATH"/${first_domain}/key.pem ]]; then
             echo -e "${Info} 证书申请成功! 脚本申请到的证书 ${Green}cert.pem${Nc} 和私钥 ${Green}key.pem${Nc} 文件已保存到${Green} "$CERT3PATH"/${first_domain}${Nc} 路径下"
             echo -e "${Info} 证书cert文件路径如下: ${Green} "$CERT3PATH"/${first_domain}/cert.pem${Nc}"
