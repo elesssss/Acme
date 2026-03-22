@@ -204,7 +204,7 @@ IPv6：${IPv6}
 }
 
 get_public_ip(){
-    InFaces=($(ls /sys/class/net | grep -E '^(eth|ens|eno|esp|enp|venet|veth|vif)'))
+    InFaces=($(ls /sys/class/net | grep -E '^(eth|ens|enp)'))
     IP_API=(
         "api64.ipify.org"
         "ip.sb"
