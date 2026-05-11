@@ -206,10 +206,12 @@ IPv6：${IPv6}
 get_public_ip(){
     InFaces=($(ls /sys/class/net | grep -E '^(eth|ens|enp)'))
     IP_API=(
-        "api64.ipify.org"
-        "ip.sb"
-        "ifconfig.me"
-        "icanhazip.com"
+        "http://ip.gs"
+        "http://ip.sb"
+        "http://ident.me"
+        "http://ifconfig.me"
+        "http://api.ipify.org"
+        "http://icanhazip.com"
     )
 
     for iface in "${InFaces[@]}"; do
